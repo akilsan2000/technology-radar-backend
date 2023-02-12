@@ -47,13 +47,51 @@ server.get("/technologies/:id", middleware.verifyToken, async (req, res) => {
 
 server.post("/technologies", middleware.verifyToken, async (req, res) => {
   try {
+    let techID = uuidv4();
     client = await MongoClient.connect(connectionString);
     const db = client.db("technology-radar");
     let r = await db
       .collection("technologies")
-      .insertOne({ ...req.body, id: uuidv4() });
-    console.log(`Added a new technology with id ${r.insertedId}`);
-    res.status(201).send();
+      .insertOne({ ...req.body, id: techID });
+    console.log(`Added a new technology with id ${techID}`);
+    res.status(201).send({ id: techID });
+  } catch (err) {
+    console.log(err);
+    res.status(400).send();
+  } finally {
+    client.close();
+  }
+  res.end;
+});
+
+server.put("/technologies/:id", middleware.verifyToken, async (req, res) => {
+  console.log(req.body);
+  try {
+    client = await MongoClient.connect(connectionString);
+    const db = client.db("technology-radar");
+    let r = await db
+      .collection("technologies")
+      .updateOne({id: req.params.id}, {$set: req.body});
+    console.log(`Updated technology with id ${req.params.id}`);
+    res.status(204).send();
+  } catch (err) {
+    console.log(err);
+    res.status(400).send();
+  } finally {
+    client.close();
+  }
+  res.end;
+});
+
+server.delete("/technologies/:id", middleware.verifyToken, async (req, res) => {
+  try {
+    client = await MongoClient.connect(connectionString);
+    const db = client.db("technology-radar");
+    let r = await db
+      .collection("technologies")
+      .deleteOne({id: req.params.id});
+    console.log(`Deleted technology with id ${req.params.id}`);
+    res.status(204).send();
   } catch (err) {
     console.log(err);
     res.status(400).send();
