@@ -7,6 +7,8 @@ var cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const middleware = require("./middleware");
+const validation = require("./validation");
+const { validationResult } = require('express-validator');
 
 require('dotenv').config()
 server.use(bodyParser.json());
@@ -45,73 +47,84 @@ server.get("/technologies/:id", middleware.verifyToken, async (req, res) => {
   res.end;
 });
 
-server.post("/technologies", middleware.verifyToken, async (req, res) => {
-  try {
-    let techID = uuidv4();
-    client = await MongoClient.connect(connectionString);
-    const db = client.db("technology-radar");
-    let r = await db
-      .collection("technologies")
-      .insertOne({ ...req.body, id: techID });
-    console.log(`Added a new technology with id ${techID}`);
-    res.status(201).send({ id: techID });
-  } catch (err) {
-    console.log(err);
-    res.status(400).send();
-  } finally {
-    client.close();
+server.post("/technologies", middleware.verifyToken, validation.technologyValidation, async (req, res) => {
+  if(req.user.role=='CTO'){
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+    try {
+      let techID = uuidv4();
+      client = await MongoClient.connect(connectionString);
+      const db = client.db("technology-radar");
+      let r = await db
+        .collection("technologies")
+        .insertOne({ ...req.body, id: techID });
+      console.log(`Added a new technology with id ${techID}`);
+      res.status(201).send({ id: techID });
+    } catch (err) {
+      console.log(err);
+      res.status(400).send();
+    } finally {
+      client.close();
+    }
+  } else {
+    return res.status(403).json({success: false, message: 'Only Admins allowed'});
   }
   res.end;
 });
 
-server.put("/technologies/:id", middleware.verifyToken, async (req, res) => {
-  console.log(req.body);
-  try {
-    client = await MongoClient.connect(connectionString);
-    const db = client.db("technology-radar");
-    let r = await db
-      .collection("technologies")
-      .updateOne({id: req.params.id}, {$set: req.body});
-    console.log(`Updated technology with id ${req.params.id}`);
-    res.status(204).send();
-  } catch (err) {
-    console.log(err);
-    res.status(400).send();
-  } finally {
-    client.close();
+server.put("/technologies/:id", middleware.verifyToken, validation.technologyValidation, async (req, res) => {
+  if(req.user.role=='CTO'){
+    try {
+      client = await MongoClient.connect(connectionString);
+      const db = client.db("technology-radar");
+      let r = await db
+        .collection("technologies")
+        .updateOne({id: req.params.id}, {$set: req.body});
+      console.log(`Updated technology with id ${req.params.id}`);
+      res.status(204).send();
+    } catch (err) {
+      console.log(err);
+      res.status(400).send();
+    } finally {
+      client.close();
+    }
+  } else {
+    return res.status(403).json({success: false, message: 'Only Admins allowed'});
   }
   res.end;
 });
 
 server.delete("/technologies/:id", middleware.verifyToken, async (req, res) => {
-  try {
-    client = await MongoClient.connect(connectionString);
-    const db = client.db("technology-radar");
-    let r = await db
-      .collection("technologies")
-      .deleteOne({id: req.params.id});
-    console.log(`Deleted technology with id ${req.params.id}`);
-    res.status(204).send();
-  } catch (err) {
-    console.log(err);
-    res.status(400).send();
-  } finally {
-    client.close();
+  if(req.user.role=='CTO'){
+    try {
+      client = await MongoClient.connect(connectionString);
+      const db = client.db("technology-radar");
+      let r = await db
+        .collection("technologies")
+        .deleteOne({id: req.params.id});
+      console.log(`Deleted technology with id ${req.params.id}`);
+      res.status(204).send();
+    } catch (err) {
+      console.log(err);
+      res.status(400).send();
+    } finally {
+      client.close();
+    }
+  } else {
+    return res.status(403).json({success: false, message: 'Only Admins allowed'});
   }
   res.end;
 });
 
 server.post("/login", async (req, res) => {
-  // Our login logic starts here
   try {
-    // Get user input
     const { username, password } = req.body;
 
-    // Validate user input
     if (!(username && password)) {
       res.status(400).send("Invalid Credentials");
     }
-    // Validate if user exist in our database
     client = await MongoClient.connect(connectionString);
     const db = client.db("technology-radar");
     let user = await db
@@ -119,7 +132,6 @@ server.post("/login", async (req, res) => {
       .findOne({ username: username});
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      // Create token
       const token = jwt.sign(
         { username: user.username, role: user.role },
         config.TOKEN_KEY,
@@ -128,7 +140,6 @@ server.post("/login", async (req, res) => {
         }
       );
 
-      // user
       res.status(200).json({success: true, message: 'Authentication successful', user: {username: user.username, role: user.role, token: token}});
     } else {
         res.status(400).json({success: false, message: 'Authentication failed'});
