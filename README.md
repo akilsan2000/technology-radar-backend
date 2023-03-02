@@ -12,3 +12,5 @@ Es muss eine Datei mit dem Namen ".env" erstellt werden (in welchem sich auch de
 TOKEN_KEY="TEST123"
 ConnectionStringDB="mongodb://localhost:27017"
 ```
+
+Mit dem Befehl `node app.js` kann der Server gestartet werden.
