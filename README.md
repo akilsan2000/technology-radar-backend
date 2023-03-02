@@ -1,7 +1,7 @@
 # technology-radar-backend
 
 Dies ist das Backend vom Projekt Technologie Radar. Es wurde mit Node.js umgesetzt.
-Nachdem das Repository erstellt wurde, können mit dem Befehl `npm install` die benötigten Packages installiert werden:
+Nachdem das Repository geclont wurde, können mit dem Befehl `npm install` die benötigten Packages installiert werden.
 
 Es muss lokal eine MongoDB Datenbank laufen.
 
